@@ -27,21 +27,21 @@
 namespace Envoy {
 namespace Upstream {
 
-HealthCheckerPtr HealthCheckerFactory::create(const envoy::api::v2::HealthCheck& hc_config,
+HealthCheckerSharedPtr HealthCheckerFactory::create(const envoy::api::v2::HealthCheck& hc_config,
                                               Upstream::Cluster& cluster, Runtime::Loader& runtime,
                                               Runtime::RandomGenerator& random,
                                               Event::Dispatcher& dispatcher) {
   switch (hc_config.health_checker_case()) {
   case envoy::api::v2::HealthCheck::HealthCheckerCase::kHttpHealthCheck:
-    return HealthCheckerPtr{
-        new ProdHttpHealthCheckerImpl(cluster, hc_config, dispatcher, runtime, random)};
+    return std::make_shared<
+        ProdHttpHealthCheckerImpl>(cluster, hc_config, dispatcher, runtime, random);
   case envoy::api::v2::HealthCheck::HealthCheckerCase::kTcpHealthCheck:
-    return HealthCheckerPtr{
-        new TcpHealthCheckerImpl(cluster, hc_config, dispatcher, runtime, random)};
+    return std::make_shared<
+        TcpHealthCheckerImpl>(cluster, hc_config, dispatcher, runtime, random);
   case envoy::api::v2::HealthCheck::HealthCheckerCase::kRedisHealthCheck:
-    return HealthCheckerPtr{
-        new RedisHealthCheckerImpl(cluster, hc_config, dispatcher, runtime, random,
-                                   Redis::ConnPool::ClientFactoryImpl::instance_)};
+    return std::make_shared<
+        RedisHealthCheckerImpl>(cluster, hc_config, dispatcher, runtime, random,
+                                   Redis::ConnPool::ClientFactoryImpl::instance_);
   default:
     // TODO(htuch): This should be subsumed eventually by the constraint checking in #1308.
     throw EnvoyException("Health checker type not set");
@@ -113,6 +113,7 @@ std::chrono::milliseconds HealthCheckerImplBase::interval() const {
 void HealthCheckerImplBase::addHosts(const std::vector<HostSharedPtr>& hosts) {
   for (const HostSharedPtr& host : hosts) {
     active_sessions_[host] = makeSession(host);
+    host->setHealthChecker(HealthCheckerSinkPtr{new HealthCheckerSinkImpl(shared_from_this(), host)});
     active_sessions_[host]->start();
   }
 }
@@ -143,6 +144,10 @@ void HealthCheckerImplBase::runCallbacks(HostSharedPtr host, bool changed_state)
   for (const HostStatusCb& cb : callbacks_) {
     cb(host, changed_state);
   }
+}
+
+void HealthCheckerImplBase::setUnhealthyCrossThread(const HostSharedPtr&) {
+  ASSERT(false);
 }
 
 void HealthCheckerImplBase::start() { addHosts(cluster_.hosts()); }

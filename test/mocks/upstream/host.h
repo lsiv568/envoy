@@ -70,6 +70,7 @@ public:
   MOCK_CONST_METHOD0(canary, bool());
   MOCK_CONST_METHOD0(cluster, const ClusterInfo&());
   MOCK_CONST_METHOD0(outlierDetector, Outlier::DetectorHostSink&());
+  MOCK_CONST_METHOD0(healthChecker, HealthCheckerSink&());
   MOCK_CONST_METHOD0(hostname, const std::string&());
   MOCK_CONST_METHOD0(stats, HostStats&());
   MOCK_CONST_METHOD0(zone, const std::string&());
@@ -97,6 +98,10 @@ public:
     return {Network::ClientConnectionPtr{data.connection_}, data.host_description_};
   }
 
+  void setHealthChecker(HealthCheckerSinkPtr&& health_checker) override {
+    setHealthChecker_(health_checker);
+  }
+
   void setOutlierDetector(Outlier::DetectorHostSinkPtr&& outlier_detector) override {
     setOutlierDetector_(outlier_detector);
   }
@@ -107,12 +112,14 @@ public:
   MOCK_CONST_METHOD0(counters, std::list<Stats::CounterSharedPtr>());
   MOCK_CONST_METHOD1(createConnection_, MockCreateConnectionData(Event::Dispatcher& dispatcher));
   MOCK_CONST_METHOD0(gauges, std::list<Stats::GaugeSharedPtr>());
+  MOCK_CONST_METHOD0(healthChecker, HealthCheckerSink&());
   MOCK_METHOD1(healthFlagClear, void(HealthFlag flag));
   MOCK_CONST_METHOD1(healthFlagGet, bool(HealthFlag flag));
   MOCK_METHOD1(healthFlagSet, void(HealthFlag flag));
   MOCK_CONST_METHOD0(healthy, bool());
   MOCK_CONST_METHOD0(hostname, const std::string&());
   MOCK_CONST_METHOD0(outlierDetector, Outlier::DetectorHostSink&());
+  MOCK_METHOD1(setHealthChecker_, void(HealthCheckerSinkPtr& health_checker));
   MOCK_METHOD1(setOutlierDetector_, void(Outlier::DetectorHostSinkPtr& outlier_detector));
   MOCK_CONST_METHOD0(stats, HostStats&());
   MOCK_CONST_METHOD0(weight, uint32_t());

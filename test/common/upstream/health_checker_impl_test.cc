@@ -217,7 +217,7 @@ public:
   std::shared_ptr<MockCluster> cluster_;
   NiceMock<Event::MockDispatcher> dispatcher_;
   std::vector<TestSessionPtr> test_sessions_;
-  std::unique_ptr<TestHttpHealthCheckerImpl> health_checker_;
+  std::shared_ptr<TestHttpHealthCheckerImpl> health_checker_;
   NiceMock<Runtime::MockLoader> runtime_;
   NiceMock<Runtime::MockRandomGenerator> random_;
 };
@@ -742,7 +742,7 @@ public:
 
   std::shared_ptr<MockCluster> cluster_;
   NiceMock<Event::MockDispatcher> dispatcher_;
-  std::unique_ptr<TcpHealthCheckerImpl> health_checker_;
+  std::shared_ptr<TcpHealthCheckerImpl> health_checker_;
   Network::MockClientConnection* connection_{};
   Event::MockTimer* timeout_timer_{};
   Event::MockTimer* interval_timer_{};
@@ -897,7 +897,7 @@ public:
   Redis::ConnPool::MockClient* client_{};
   Redis::ConnPool::MockPoolRequest pool_request_;
   Redis::ConnPool::PoolCallbacks* pool_callbacks_{};
-  std::unique_ptr<RedisHealthCheckerImpl> health_checker_;
+  std::shared_ptr<RedisHealthCheckerImpl> health_checker_;
 };
 
 TEST_F(RedisHealthCheckerImplTest, All) {

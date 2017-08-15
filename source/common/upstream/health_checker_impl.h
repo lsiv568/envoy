@@ -40,7 +40,7 @@ public:
    * @param dispatcher supplies the dispatcher.
    * @return a health checker.
    */
-  static HealthCheckerPtr create(const envoy::api::v2::HealthCheck& hc_config,
+  static HealthCheckerSharedPtr create(const envoy::api::v2::HealthCheck& hc_config,
                                  Upstream::Cluster& cluster, Runtime::Loader& runtime,
                                  Runtime::RandomGenerator& random, Event::Dispatcher& dispatcher);
 };
@@ -68,7 +68,8 @@ struct HealthCheckerStats {
 /**
  * Base implementation for both the HTTP and TCP health checker.
  */
-class HealthCheckerImplBase : public HealthChecker, protected Logger::Loggable<Logger::Id::hc> {
+class HealthCheckerImplBase : public HealthChecker, protected Logger::Loggable<Logger::Id::hc>,
+                              public std::enable_shared_from_this<HealthCheckerImplBase> {
 public:
   // Upstream::HealthChecker
   void addHostCheckCompleteCb(HostStatusCb callback) override { callbacks_.push_back(callback); }
@@ -120,6 +121,23 @@ protected:
   Runtime::RandomGenerator& random_;
 
 private:
+  struct HealthCheckerSinkImpl : public HealthCheckerSink {
+    HealthCheckerSinkImpl(const std::shared_ptr<HealthCheckerImplBase>& health_checker,
+                          const HostSharedPtr& host) : health_checker_(health_checker), host_(host) {}
+
+    // Upstream::HealthCheckerSink
+    void setUnhealthy() override {
+      // This is called cross thread. The cluster/health checker might already be gone.
+      std::shared_ptr<HealthCheckerImplBase> health_checker = health_checker_.lock();
+      if (health_checker) {
+        health_checker->setUnhealthyCrossThread(host_.lock());
+      }
+    }
+
+    std::weak_ptr<HealthCheckerImplBase> health_checker_;
+    std::weak_ptr<Host> host_;
+  };
+
   void addHosts(const std::vector<HostSharedPtr>& hosts);
   void decHealthy();
   HealthCheckerStats generateStats(Stats::Scope& scope);
@@ -129,6 +147,7 @@ private:
                              const std::vector<HostSharedPtr>& hosts_removed);
   void refreshHealthyStat();
   void runCallbacks(HostSharedPtr host, bool changed_state);
+  void setUnhealthyCrossThread(const HostSharedPtr& host);
 
   static const std::chrono::milliseconds NO_TRAFFIC_INTERVAL;
 

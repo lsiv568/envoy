@@ -13,6 +13,7 @@
 #include "envoy/http/codec.h"
 #include "envoy/network/connection.h"
 #include "envoy/ssl/context.h"
+#include "envoy/upstream/health_checker_sink.h"
 #include "envoy/upstream/load_balancer_type.h"
 #include "envoy/upstream/outlier_detection.h"
 #include "envoy/upstream/resource_manager.h"
@@ -78,6 +79,11 @@ public:
    *         information may be considered.
    */
   virtual bool healthy() const PURE;
+
+  /**
+   *
+   */
+  virtual void setHealthChecker(HealthCheckerSinkPtr&& health_checker) PURE;
 
   /**
    * Set the host's outlier detector. Outlier detectors are assumed to be thread safe, however
